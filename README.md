@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StackScope
 
-## Getting Started
+StackScope is a statically generated visual learning app for understanding how frontend, backend, data, infrastructure, deployment, and observability work together.
 
-First, run the development server:
+## Included MVP
+
+- Architect lab for composing frontend, backend, database, architecture patterns, CI/CD, infrastructure as code, packaging, compute, and deployment choices with compatibility verdicts, protocol maps, constraints, official sources, and shareable URL state.
+- Persistent light/dark theme with system preference fallback and an accessible header toggle.
+- Six guided architecture lessons with deterministic playback.
+- Twenty reusable concept pages.
+- Interactive pan/zoom system maps with inspectable nodes and connections.
+- Plain-language, engineering, and production explanation depth.
+- Search and topic filtering.
+- Shareable lesson step, selection, and depth state.
+- Keyboard, high-contrast, responsive, and reduced-motion behavior.
+- Build-time content/reference validation and lesson knowledge checks.
+
+## Local development
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Quality commands
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm exec playwright install
+pnpm test:e2e
+```
 
-## Learn More
+The default browser matrix covers Chromium, Firefox, and a mobile Chromium device. Set `PLAYWRIGHT_WEBKIT=1` to add WebKit on a host where `pnpm exec playwright install-deps webkit` has been installed.
 
-To learn more about Next.js, take a look at the following resources:
+`pnpm build` creates the static site in `out/`. `pnpm start` serves that directory on `0.0.0.0:${PORT:-4173}` using the dependency-free production server in `scripts/serve-static.mjs`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Content architecture
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `src/content/lessons.ts` — lesson graphs, narration, failure modes, observations, and checks.
+- `src/content/concepts.ts` — progressive concept explanations.
+- `src/content/types.ts` — versioned content contract.
+- `src/content/architecture.ts` — sourced technology catalog and architect-selection contract.
+- `src/lib/content.ts` — build-time cross-reference validation and lookup.
+- `src/lib/compatibility.ts` — pure compatibility, communication, and URL-state analysis.
+- `src/lib/playback.ts` — pure playback and public URL-state behavior.
 
-## Deploy on Vercel
+Every lesson must have unique node/edge identifiers, valid step references, valid glossary/prerequisite references, and an in-range knowledge-check answer. Importing the content layer fails immediately when those rules are broken.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deployment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Upload the contents of `out/` to any static host with clean-directory URL support. The app has no runtime API, database, account system, cookies, or analytics vendor.
+
+### Railway
+
+The repository includes `railway.json`. Railway uses Railpack to run `pnpm build`, checks `/` for deployment health, and starts the static server with Railway's injected `PORT`.
+
+From the Railway dashboard:
+
+1. Push this repository to GitHub.
+2. Create a Railway project and choose **Deploy from GitHub repo**.
+3. Select the StackScope repository. No application variables or database are required.
+4. After the first deployment is healthy, open the service's **Settings → Networking** section and select **Generate Domain**.
+
+Alternatively, after installing and authenticating the Railway CLI:
+
+```bash
+railway login
+railway init
+railway up
+railway open
+```
+
+The server must not be given a hard-coded Railway port. Railway supplies `PORT`, and `pnpm start` binds it on `0.0.0.0` automatically.

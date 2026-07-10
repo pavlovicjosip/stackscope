@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+
+# local agent workflow evidence
+/.omx/
 
 # next.js
 /.next/
