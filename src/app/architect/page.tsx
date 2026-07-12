@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { StackArchitect } from "@/components/stack-architect";
 
 export const metadata: Metadata = {
-  title: "Technology stack compatibility architect",
-  description: "Compose technologies, frontend and backend architecture patterns, infrastructure as code, compute, and deployment, then inspect compatibility using official documentation.",
+  title: "Architect Lab — compare architecture consequences",
+  description: "Configure runtime architectures, compare variants, understand risks and trade-offs, and export the final decision as an architecture decision record.",
 };
 
 export default function ArchitectPage() {

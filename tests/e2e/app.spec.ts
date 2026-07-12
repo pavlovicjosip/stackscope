@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+async function selectTechnology(page: import("@playwright/test").Page, category: string, technology: RegExp) {
+  const option = page.getByRole("radio", { name: technology });
+  if (!(await option.isVisible())) await page.locator("summary").filter({ has: page.getByText(category, { exact: true }) }).click();
+  await option.check();
+}
+
 test("home page introduces the product and reaches the system library", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/StackScope/);
@@ -44,13 +50,24 @@ test("architect composes a compatible stack and explains every boundary", async 
   await expect(page.getByRole("heading", { level: 1, name: /Compose a stack/i })).toBeVisible();
   const mapBounds = await page.getByTestId("architecture-map").boundingBox();
   const pickerBounds = await page.getByLabel("Choose technologies").boundingBox();
-  expect(mapBounds!.width).toBeGreaterThan(testInfo.project.name === "mobile" ? 350 : 1000);
-  expect(Math.abs(mapBounds!.x - pickerBounds!.x)).toBeLessThan(2);
+  expect(mapBounds!.width).toBeGreaterThan(testInfo.project.name === "mobile" ? 350 : 400);
+  if (testInfo.project.name === "mobile") {
+    expect(Math.abs(mapBounds!.x - pickerBounds!.x)).toBeLessThan(20);
+  } else {
+    expect(mapBounds!.x).toBeGreaterThan(pickerBounds!.x + pickerBounds!.width);
+    await page.evaluate(() => {
+      document.documentElement.style.scrollBehavior = "auto";
+      window.scrollTo(0, 900);
+    });
+    await expect.poll(async () => (await page.getByLabel("Choose technologies").boundingBox())?.y).toBeGreaterThanOrEqual(0);
+    expect((await page.getByLabel("Choose technologies").boundingBox())!.y).toBeLessThanOrEqual(1);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
   await expect(page.getByText("Conditional fit", { exact: true })).toBeVisible();
-  await page.getByRole("radio", { name: /Vue/ }).check();
-  await page.getByRole("radio", { name: /Single-page app/ }).check();
-  await page.getByRole("radio", { name: /FastAPI/ }).check();
-  await page.getByRole("radio", { name: /MongoDB/ }).check();
+  await selectTechnology(page, "Frontend", /Vue/);
+  await selectTechnology(page, "Frontend approach", /Single-page app/);
+  await selectTechnology(page, "Backend", /FastAPI/);
+  await selectTechnology(page, "Database", /MongoDB/);
   await expect(page.getByText("Compatible", { exact: true })).toBeVisible();
   await expect(page).toHaveURL(/frontend=vue/);
   await expect(page).toHaveURL(/backend=fastapi/);
@@ -78,14 +95,14 @@ test("theme control persists dark and light preferences", async ({ page }) => {
 
 test("architect models Angular, microfrontends, microservices, Terraform, and Fargate", async ({ page }) => {
   await page.goto("/architect/");
-  await page.getByRole("radio", { name: /Angular/ }).check();
-  await page.getByRole("radio", { name: /Microfrontends/ }).check();
-  await page.getByRole("radio", { name: /Microservices/ }).check();
+  await selectTechnology(page, "Frontend", /Angular/);
+  await selectTechnology(page, "Frontend approach", /Microfrontends/);
+  await selectTechnology(page, "Backend approach", /Microservices/);
   await expect(page.getByText("Conditional fit", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Microfrontends require organizational boundaries, not only routing" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "One database engine must not become one shared ownership boundary" })).toBeVisible();
-  await expect(page.getByRole("radio", { name: /Terraform/ })).toBeChecked();
-  await expect(page.getByRole("radio", { name: /AWS Fargate/ })).toBeChecked();
+  await expect(page.locator("summary").filter({ hasText: "Infrastructure as code" })).toContainText("Terraform");
+  await expect(page.locator("summary").filter({ hasText: "Compute" })).toContainText("AWS Fargate");
   await expect(page.getByTestId("example-node-catalog-mfe")).toContainText("Catalog frontend");
   await expect(page.getByTestId("example-node-account-mfe")).toContainText("Account frontend");
   await expect(page.getByTestId("example-node-checkout-mfe")).toContainText("Checkout frontend");
@@ -101,8 +118,8 @@ test("architect models Angular, microfrontends, microservices, Terraform, and Fa
 
 test("architect expands delivery into evidence, infrastructure, artifact, rollout, and health", async ({ page }) => {
   await page.goto("/architect/");
-  await page.getByRole("button", { name: /Delivery example/ }).click();
-  await expect(page.getByRole("button", { name: /Delivery example/ })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Delivery", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Delivery", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("example-node-validate")).toContainText("Validate + lint");
   await expect(page.getByTestId("example-node-test")).toContainText("Test behavior matrix");
   await expect(page.getByTestId("example-node-build")).toContainText("Build 2 immutable artifacts");
@@ -116,8 +133,8 @@ test("architect expands delivery into evidence, infrastructure, artifact, rollou
 
 test("architect composes polyglot microfrontends and microservices", async ({ page }) => {
   await page.goto("/architect/");
-  await page.getByRole("radio", { name: /Microfrontends/ }).check();
-  await page.getByRole("radio", { name: /Microservices/ }).check();
+  await selectTechnology(page, "Frontend approach", /Microfrontends/);
+  await selectTechnology(page, "Backend approach", /Microservices/);
   await page.getByLabel("catalog microfrontend framework").selectOption("react");
   await page.getByLabel("account microfrontend framework").selectOption("angular");
   await page.getByLabel("checkout microfrontend framework").selectOption("vue");
@@ -138,7 +155,7 @@ test("architect composes polyglot microfrontends and microservices", async ({ pa
   await expect(page).toHaveURL(/mfeAccount=angular/);
   await expect(page).toHaveURL(/svcCatalog=fastapi/);
 
-  await page.getByRole("button", { name: /Delivery example/ }).click();
+  await page.getByRole("button", { name: "Delivery", exact: true }).click();
   await expect(page.getByTestId("example-node-build")).toContainText("Build 7 immutable artifacts");
   await page.reload();
   await expect(page.getByLabel("account microfrontend framework")).toHaveValue("angular");
@@ -149,11 +166,11 @@ test("architect blocks a scheduler without a container image and restores its UR
   await page.goto("/architect/?frontend=react&backend=spring&database=mysql&ci=jenkins&packaging=source&deployment=kubernetes");
   await expect(page.getByText("Incompatible", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kubernetes needs a container image" })).toBeVisible();
-  await expect(page.getByRole("radio", { name: /Source \/ build output/ })).toBeChecked();
-  await page.getByRole("radio", { name: /Docker image/ }).check();
+  await expect(page.locator("summary").filter({ hasText: "Packaging" })).toContainText("Source / build output");
+  await selectTechnology(page, "Packaging", /Docker image/);
   await expect(page.getByText("Conditional fit", { exact: true })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("radio", { name: /Docker image/ })).toBeChecked();
+  await expect(page.locator("summary").filter({ hasText: "Packaging" })).toContainText("Docker image");
 });
 
 test("lesson restores URL state, advances, and exposes progressive component detail", async ({ page }) => {
